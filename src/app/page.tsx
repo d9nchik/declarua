@@ -708,13 +708,25 @@ function CategoryAccordion({ category, lots, dividends, dpsRows, hide, exchangeR
 
 // ── Ticker Logo ──
 
+const TICKER_COLORS = [
+  "bg-sky-600", "bg-violet-600", "bg-emerald-600", "bg-rose-600",
+  "bg-amber-600", "bg-cyan-600", "bg-pink-600", "bg-indigo-600",
+  "bg-teal-600", "bg-orange-600", "bg-lime-600", "bg-fuchsia-600",
+];
+
+function hashCode(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
 function TickerLogo({ symbol }: { symbol: string }) {
-  const [show, setShow] = useState(true);
-  if (!show) return null;
+  const color = TICKER_COLORS[hashCode(symbol) % TICKER_COLORS.length];
+  const letter = symbol.charAt(0).toUpperCase();
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={`https://assets.parqet.com/logos/symbol/${symbol}`} alt="" width={16} height={16}
-      className="inline-block w-4 h-4 rounded-sm mr-1.5 align-middle" loading="lazy" onError={() => setShow(false)} />
+    <span className={`inline-flex items-center justify-center w-4 h-4 rounded-sm mr-1.5 align-middle text-[9px] font-bold text-white ${color}`}>
+      {letter}
+    </span>
   );
 }
 
