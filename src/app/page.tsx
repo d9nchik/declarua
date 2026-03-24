@@ -139,7 +139,11 @@ export default function Home() {
   }, []);
 
   const handleDpsFile = useCallback((file: File) => {
-    file.text().then((text) => {
+    file.arrayBuffer().then((buf) => {
+      // Peek at raw bytes as ASCII to detect encoding from XML declaration
+      const ascii = new TextDecoder("ascii", { fatal: false }).decode(buf.slice(0, 200));
+      const isWin1251 = /encoding\s*=\s*["']windows-1251["']/i.test(ascii);
+      const text = new TextDecoder(isWin1251 ? "windows-1251" : "utf-8").decode(buf);
       try {
         setDpsRows(parseDpsXml(text));
         setDpsFileName(file.name);
