@@ -41,6 +41,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://d9nchik.github.io/declarua",
   },
+  verification: {
+    google: "ffHN_CuRbALA3MRYDzFminSGBk9i0sJoEkLTodpWncM",
+  },
 };
 
 export default function RootLayout({
