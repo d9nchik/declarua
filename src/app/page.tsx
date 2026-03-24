@@ -487,7 +487,7 @@ function ReportPhase({ info, result, dpsRows, ibkrData, hideAmounts, onReset, on
       {result.dividends.length > 0 && (
         <div className="flex items-center gap-2">
           <Checkbox id="ftc-report" checked={info.applyForeignTaxCredit}
-            onCheckedChange={(checked) => updateField("applyForeignTaxCredit", checked === true)} />
+            onCheckedChange={(checked) => { updateField("applyForeignTaxCredit", checked === true); setTimeout(onRecalculate, 0); }} />
           <Label htmlFor="ftc-report" className="text-sm">Зарахувати іноземний податок (п.18)</Label>
           {result.foreignTaxCredit > 0 && <Badge variant="secondary" className="text-emerald-400">-{fmtUah(result.foreignTaxCredit, h)} ₴</Badge>}
         </div>
