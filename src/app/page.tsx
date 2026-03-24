@@ -235,14 +235,8 @@ export default function Home() {
       )}
 
       <footer className="border-t border-border mt-auto">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="mx-auto max-w-6xl px-4 py-4">
           <p className="text-xs text-muted-foreground">DeclarUA — open source. Не є юридичною консультацією.</p>
-          {phase === "report" && (
-            <a href="https://send.monobank.ua/jar/2FaPPcisEC" target="_blank" rel="noopener noreferrer"
-              className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
-              Підтримати ЗСУ — FPV дрони для фронту
-            </a>
-          )}
         </div>
       </footer>
     </div>
