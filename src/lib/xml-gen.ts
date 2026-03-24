@@ -260,6 +260,7 @@ export function generateF1Xml(
     <R001G4>${fmt(totalProceeds)}</R001G4>
     <R001G5>${fmt(totalCost)}</R001G5>
     <R001G6>${fmt(totalPnl)}</R001G6>
+    <R002G6>${fmt(info.prevLoss)}</R002G6>
     <R003G6>${fmt(taxableProfit)}</R003G6>
     <R004G6>${fmt(pdfo)}</R004G6>
     <R005G6>${fmt(vz)}</R005G6>
