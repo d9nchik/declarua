@@ -131,7 +131,10 @@ export default function Home() {
     });
   }, []);
 
-  const handleProcess = useCallback(async () => {
+  const runCalculation = useCallback(async (
+    calcInfo: DeclarationInfo, calcIbkr: IbkrData | null, calcDps: DpsIncomeRow[]
+  ) => {
+    const prevPhase = phase;
     setPhase("processing");
     setError(null);
     try {
@@ -140,7 +143,7 @@ export default function Home() {
       await new Promise((r) => setTimeout(r, 200));
       setProgressLabel("Завантаження курсів НБУ...");
       setProgressValue(30);
-      const r = await calculateTax(info, ibkrData, dpsRows);
+      const r = await calculateTax(calcInfo, calcIbkr, calcDps);
       setProgressLabel("Розрахунок податків...");
       setProgressValue(80);
       await new Promise((r) => setTimeout(r, 300));
@@ -151,9 +154,13 @@ export default function Home() {
       setPhase("report");
     } catch (err) {
       setError(`Помилка: ${err instanceof Error ? err.message : "невідома"}`);
-      setPhase("upload");
+      setPhase(prevPhase === "report" ? "report" : "upload");
     }
-  }, [info, ibkrData, dpsRows]);
+  }, [phase]);
+
+  const handleProcess = useCallback(() => {
+    runCalculation(info, ibkrData, dpsRows);
+  }, [info, ibkrData, dpsRows, runCalculation]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -180,14 +187,6 @@ export default function Home() {
   }, []);
 
   const hasFiles = ibkrData !== null || dpsRows.length > 0;
-
-  const isFormValid =
-    info.fullName.trim() !== "" &&
-    /^\d{10}$/.test(info.tin) &&
-    /^\d{4}$/.test(info.stiCode) &&
-    info.city.trim() !== "" &&
-    info.street.trim() !== "" &&
-    hasFiles;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -217,20 +216,22 @@ export default function Home() {
         {error && <Alert variant="destructive" className="mb-6"><AlertDescription>{error}</AlertDescription></Alert>}
 
         {phase === "upload" && (
-          <UploadPhase info={info} updateField={updateField} ibkrData={ibkrData} dpsRows={dpsRows}
+          <UploadPhase ibkrData={ibkrData} dpsRows={dpsRows}
             ibkrFileName={ibkrFileName} dpsFileName={dpsFileName} onIbkrFile={handleIbkrFile}
-            onDpsFile={handleDpsFile} onProcess={handleProcess} isFormValid={isFormValid} />
+            onDpsFile={handleDpsFile} onProcess={handleProcess} />
         )}
         {phase === "processing" && <ProcessingPhase label={progressLabel} value={progressValue} />}
         {phase === "report" && result && (
           <ReportPhase info={info} result={result} dpsRows={dpsRows} ibkrData={ibkrData}
-            hideAmounts={hideAmounts} onReset={handleReset} onDownload={() => setXmlModalOpen(true)} updateField={updateField} />
+            hideAmounts={hideAmounts} onReset={handleReset} onDownload={() => setXmlModalOpen(true)} updateField={updateField}
+            ibkrFileName={ibkrFileName} dpsFileName={dpsFileName}
+            onIbkrFile={handleIbkrFile} onDpsFile={handleDpsFile} onRecalculate={handleProcess} />
         )}
       </main>
 
       {result && (
         <XmlPreviewModal open={xmlModalOpen} onClose={() => setXmlModalOpen(false)}
-          result={result} info={info} hideAmounts={hideAmounts} onDownload={handleDownload} />
+          result={result} info={info} hideAmounts={hideAmounts} onDownload={handleDownload} updateField={updateField} />
       )}
 
       <footer className="border-t border-border mt-auto">
@@ -250,14 +251,14 @@ export default function Home() {
 
 // ── Upload Phase ──
 
-function UploadPhase({ info, updateField, ibkrData, dpsRows, ibkrFileName, dpsFileName, onIbkrFile, onDpsFile, onProcess, isFormValid }: {
-  info: DeclarationInfo;
-  updateField: <K extends keyof DeclarationInfo>(key: K, value: DeclarationInfo[K]) => void;
+function UploadPhase({ ibkrData, dpsRows, ibkrFileName, dpsFileName, onIbkrFile, onDpsFile, onProcess }: {
   ibkrData: IbkrData | null; dpsRows: DpsIncomeRow[];
   ibkrFileName: string | null; dpsFileName: string | null;
   onIbkrFile: (file: File) => void; onDpsFile: (file: File) => void;
-  onProcess: () => void; isFormValid: boolean;
+  onProcess: () => void;
 }) {
+  const hasFiles = ibkrData !== null || dpsRows.length > 0;
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="text-center space-y-2 py-4">
@@ -265,88 +266,57 @@ function UploadPhase({ info, updateField, ibkrData, dpsRows, ibkrFileName, dpsFi
         <p className="text-sm text-muted-foreground">Оберіть хоча б один файл для обробки</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <DropZone label="Відомості з ДПС" subtitle="Форма F1419104 — XML з Державного реєстру" icon="🏛️"
-          fileName={dpsFileName} fileInfo={dpsRows.length > 0 ? `${dpsRows.length} записів` : null} onFile={onDpsFile}
-          helpTitle="Як отримати цей файл?" helpSteps={[
-            { text: "Увійдіть до кабінету платника податків → cabinet.tax.gov.ua" },
-            { text: "Перейдіть у розділ «Запити» → «Запит на отримання відомостей з Державного реєстру»" },
-            { text: "Оберіть форму F1419104 «Відомості з Державного реєстру фізичних осіб — платників податків про суми виплачених доходів»" },
-            { text: "Вкажіть звітний період — потрібний рік (наприклад, 01.01.2025 — 31.12.2025)" },
-            { text: "Підпишіть запит КЕП та надішліть" },
-            { text: "Дочекайтесь відповіді (зазвичай кілька хвилин) → завантажте XML файл з відповіді" },
-          ]} />
-        <DropZone label="Flex-запит IBKR" subtitle="Завантаження Flex-запитів Interactive Brokers" icon="📈"
-          fileName={ibkrFileName} fileInfo={ibkrData ? `${ibkrData.lots.length} угод, ${ibkrData.dividends.length} дивідендів` : null}
-          onFile={onIbkrFile} helpTitle="Як сформувати Flex-запит?" helpSteps={[
-            { text: "Увійдіть до облікового запису Interactive Brokers → interactivebrokers.com" },
-            { text: "Перейдіть у вкладку Performance & Reports → Flex Queries" },
-            { text: "У таблиці Activity Flex Query натисніть + та вкажіть ім'я в полі Query Name" },
-            { text: "У Sections оберіть та налаштуйте:", sub: [
-              "Cash Transaction → Dividends, Payment in Lieu of Dividends, Withholding Tax, 871(m) Withholding, Other Income, Brokers interest received, Bond Interest Paid, Bond Interest Received, Detail → Select all → Save",
-              "Corporate Actions → Detail → Select all → Save",
-              "Grant Activity → Detail → Select all → Save",
-              "Trades → Closed Lots, Execution (якщо були операції з опціонами) → Select all → Save",
-            ]},
-            { text: "Display Account Alias in Place of Account ID? → Yes" },
-            { text: "Натисніть Continue → Create → Ok" },
-            { text: "У рядку з вашим запитом натисніть стрілку → Run" },
-            { text: "Оберіть Period → Custom Date Range та вкажіть рік (наприклад, 01.01.2025 — 31.12.2025)" },
-            { text: "Натисніть Run, дочекайтесь формування та завантажте XML-файл" },
-          ]} />
-      </div>
-
-      <Separator />
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Дані для декларації</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="year">Рік</Label>
-              <Input id="year" type="number" value={info.year} onChange={(e) => updateField("year", parseInt(e.target.value) || 0)} />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="fullName">ПІБ</Label>
-              <Input id="fullName" placeholder="Іваненко Іван Іванович" value={info.fullName} onChange={(e) => updateField("fullName", e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tin">ІПН</Label>
-              <Input id="tin" placeholder="1234567890" maxLength={10} value={info.tin}
-                onChange={(e) => updateField("tin", e.target.value.replace(/\D/g, ""))} className="font-mono" />
-              {info.tin && !/^\d{10}$/.test(info.tin) && <p className="text-xs text-destructive">ІПН має містити 10 цифр</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stiCode">Код ДПІ</Label>
-              <Input id="stiCode" placeholder="2655" maxLength={4} value={info.stiCode}
-                onChange={(e) => updateField("stiCode", e.target.value.replace(/\D/g, ""))} className="font-mono" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="prevLoss">Збиток попередніх років, ₴</Label>
-              <Input id="prevLoss" type="number" min={0} step={0.01} value={info.prevLoss || ""}
-                onChange={(e) => updateField("prevLoss", parseFloat(e.target.value) || 0)} className="font-mono" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">Місто</Label>
-              <Input id="city" placeholder="Київ" value={info.city} onChange={(e) => updateField("city", e.target.value)} />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="street">Вулиця</Label>
-              <Input id="street" placeholder="вул. Хрещатик, 1, кв. 1" value={info.street} onChange={(e) => updateField("street", e.target.value)} />
-            </div>
-            <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
-              <Checkbox id="foreignTaxCredit" checked={info.applyForeignTaxCredit}
-                onCheckedChange={(checked) => updateField("applyForeignTaxCredit", checked === true)} />
-              <Label htmlFor="foreignTaxCredit" className="text-sm">Зарахувати іноземний податок (п.18 декларації)</Label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <FileDropZones ibkrData={ibkrData} dpsRows={dpsRows} ibkrFileName={ibkrFileName}
+        dpsFileName={dpsFileName} onIbkrFile={onIbkrFile} onDpsFile={onDpsFile} />
 
       <div className="text-center space-y-3">
-        <Button size="lg" onClick={onProcess} disabled={!isFormValid} className="px-8">Обробити файли</Button>
-        {!isFormValid && <p className="text-xs text-muted-foreground">Заповніть всі поля та завантажте хоча б один файл</p>}
+        <Button size="lg" onClick={onProcess} disabled={!hasFiles} className="px-8">Обробити файли</Button>
+        {!hasFiles && <p className="text-xs text-muted-foreground">Завантажте хоча б один файл</p>}
       </div>
+    </div>
+  );
+}
+
+// ── File Drop Zones (shared between upload & report) ──
+
+function FileDropZones({ ibkrData, dpsRows, ibkrFileName, dpsFileName, onIbkrFile, onDpsFile, compact }: {
+  ibkrData: IbkrData | null; dpsRows: DpsIncomeRow[];
+  ibkrFileName: string | null; dpsFileName: string | null;
+  onIbkrFile: (file: File) => void; onDpsFile: (file: File) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <DropZone label="Відомості з ДПС" subtitle="Форма F1419104 — XML з Державного реєстру" icon="🏛️"
+        fileName={dpsFileName} fileInfo={dpsRows.length > 0 ? `${dpsRows.length} записів` : null} onFile={onDpsFile}
+        compact={compact}
+        helpTitle="Як отримати цей файл?" helpSteps={[
+          { text: "Увійдіть до кабінету платника податків → cabinet.tax.gov.ua" },
+          { text: "Перейдіть у розділ «Запити» → «Запит на отримання відомостей з Державного реєстру»" },
+          { text: "Оберіть форму F1419104 «Відомості з Державного реєстру фізичних осіб — платників податків про суми виплачених доходів»" },
+          { text: "Вкажіть звітний період — потрібний рік (наприклад, 01.01.2025 — 31.12.2025)" },
+          { text: "Підпишіть запит КЕП та надішліть" },
+          { text: "Дочекайтесь відповіді (зазвичай кілька хвилин) → завантажте XML файл з відповіді" },
+        ]} />
+      <DropZone label="Flex-запит IBKR" subtitle="Завантаження Flex-запитів Interactive Brokers" icon="📈"
+        fileName={ibkrFileName} fileInfo={ibkrData ? `${ibkrData.lots.length} угод, ${ibkrData.dividends.length} дивідендів` : null}
+        onFile={onIbkrFile} compact={compact}
+        helpTitle="Як сформувати Flex-запит?" helpSteps={[
+          { text: "Увійдіть до облікового запису Interactive Brokers → interactivebrokers.com" },
+          { text: "Перейдіть у вкладку Performance & Reports → Flex Queries" },
+          { text: "У таблиці Activity Flex Query натисніть + та вкажіть ім'я в полі Query Name" },
+          { text: "У Sections оберіть та налаштуйте:", sub: [
+            "Cash Transaction → Dividends, Payment in Lieu of Dividends, Withholding Tax, 871(m) Withholding, Other Income, Brokers interest received, Bond Interest Paid, Bond Interest Received, Detail → Select all → Save",
+            "Corporate Actions → Detail → Select all → Save",
+            "Grant Activity → Detail → Select all → Save",
+            "Trades → Closed Lots, Execution (якщо були операції з опціонами) → Select all → Save",
+          ]},
+          { text: "Display Account Alias in Place of Account ID? → Yes" },
+          { text: "Натисніть Continue → Create → Ok" },
+          { text: "У рядку з вашим запитом натисніть стрілку → Run" },
+          { text: "Оберіть Period → Custom Date Range та вкажіть рік (наприклад, 01.01.2025 — 31.12.2025)" },
+          { text: "Натисніть Run, дочекайтесь формування та завантажте XML-файл" },
+        ]} />
     </div>
   );
 }
@@ -358,10 +328,11 @@ interface HelpStep {
   sub?: string[];
 }
 
-function DropZone({ label, subtitle, icon, fileName, fileInfo, onFile, helpTitle, helpSteps }: {
+function DropZone({ label, subtitle, icon, fileName, fileInfo, onFile, helpTitle, helpSteps, compact }: {
   label: string; subtitle: string; icon: string;
   fileName: string | null; fileInfo: string | null;
   onFile: (file: File) => void; helpTitle: string; helpSteps: HelpStep[];
+  compact?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -378,15 +349,15 @@ function DropZone({ label, subtitle, icon, fileName, fileInfo, onFile, helpTitle
     <div onClick={() => inputRef.current?.click()}
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)} onDrop={handleDrop}
-      className={`relative cursor-pointer rounded-lg border-2 border-dashed p-6 transition-all duration-200
+      className={`relative cursor-pointer rounded-lg border-2 border-dashed ${compact ? "p-3" : "p-6"} transition-all duration-200
         ${dragging ? "border-blue-500 bg-blue-500/10 scale-[1.02]"
           : isLoaded ? "border-emerald-500/50 bg-emerald-500/5"
           : "border-border hover:border-muted-foreground/50 hover:bg-muted/30"}`}>
       <input ref={inputRef} type="file" accept=".xml" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} className="hidden" />
-      <div className="text-center space-y-2">
-        <div className="text-3xl">{isLoaded ? "✅" : icon}</div>
+      <div className={`text-center ${compact ? "space-y-1" : "space-y-2"}`}>
+        <div className={compact ? "text-xl" : "text-3xl"}>{isLoaded ? "✅" : icon}</div>
         <p className="font-medium text-sm">{label}</p>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
+        {!compact && <p className="text-xs text-muted-foreground">{subtitle}</p>}
         {isLoaded && (
           <div className="space-y-1 pt-1">
             <p className="text-xs text-emerald-400 truncate">{fileName}</p>
@@ -435,13 +406,18 @@ function ProcessingPhase({ label, value }: { label: string; value: number }) {
 
 // ── Report Phase ──
 
-function ReportPhase({ info, result, dpsRows, ibkrData, hideAmounts, onReset, onDownload, updateField }: {
+function ReportPhase({ info, result, dpsRows, ibkrData, hideAmounts, onReset, onDownload, updateField,
+  ibkrFileName, dpsFileName, onIbkrFile, onDpsFile, onRecalculate }: {
   info: DeclarationInfo; result: TaxResult; dpsRows: DpsIncomeRow[]; ibkrData: IbkrData | null;
   hideAmounts: boolean; onReset: () => void; onDownload: () => void;
   updateField: <K extends keyof DeclarationInfo>(key: K, value: DeclarationInfo[K]) => void;
+  ibkrFileName: string | null; dpsFileName: string | null;
+  onIbkrFile: (file: File) => void; onDpsFile: (file: File) => void;
+  onRecalculate: () => void;
 }) {
   const h = hideAmounts;
   const totalTx = result.lots.length + result.dividends.length + dpsRows.length;
+  const [showUpload, setShowUpload] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -454,10 +430,23 @@ function ReportPhase({ info, result, dpsRows, ibkrData, hideAmounts, onReset, on
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onReset}>Нові файли</Button>
+          <Button variant="outline" size="sm" onClick={() => setShowUpload(!showUpload)}>
+            {showUpload ? "Сховати" : "Додати файли"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={onReset}>Скинути</Button>
           <Button size="sm" onClick={onDownload}>Згенерувати XML</Button>
         </div>
       </div>
+
+      {showUpload && (
+        <div className="space-y-3">
+          <FileDropZones ibkrData={ibkrData} dpsRows={dpsRows} ibkrFileName={ibkrFileName}
+            dpsFileName={dpsFileName} onIbkrFile={onIbkrFile} onDpsFile={onDpsFile} compact />
+          <div className="text-center">
+            <Button size="sm" onClick={onRecalculate}>Перерахувати</Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Категорій" value={String(result.categories.length)} />
@@ -758,20 +747,70 @@ function TickerLogo({ symbol }: { symbol: string }) {
 
 // ── XML Preview Modal ──
 
-function XmlPreviewModal({ open, onClose, result, info, hideAmounts, onDownload }: {
+function XmlPreviewModal({ open, onClose, result, info, hideAmounts, onDownload, updateField }: {
   open: boolean; onClose: () => void; result: TaxResult; info: DeclarationInfo; hideAmounts: boolean; onDownload: () => void;
+  updateField: <K extends keyof DeclarationInfo>(key: K, value: DeclarationInfo[K]) => void;
 }) {
   const h = hideAmounts;
   const NON_TAXABLE = new Set(["11.1", "11.2", "11.3"]);
 
+  const isFormValid =
+    info.fullName.trim() !== "" &&
+    /^\d{10}$/.test(info.tin) &&
+    /^\d{4}$/.test(info.stiCode) &&
+    info.city.trim() !== "" &&
+    info.street.trim() !== "";
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>XML декларація F0100215</DialogTitle>
-          <DialogDescription>Перегляньте дані перед завантаженням. Рік: {info.year}, ІПН: {info.tin}</DialogDescription>
+          <DialogTitle>Генерація XML декларації F0100215</DialogTitle>
+          <DialogDescription>Заповніть дані та перегляньте результат перед завантаженням</DialogDescription>
         </DialogHeader>
 
+        {/* Personal data form */}
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Дані для декларації</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="modal-year" className="text-xs">Рік</Label>
+              <Input id="modal-year" type="number" value={info.year} onChange={(e) => updateField("year", parseInt(e.target.value) || 0)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="modal-tin" className="text-xs">ІПН</Label>
+              <Input id="modal-tin" placeholder="1234567890" maxLength={10} value={info.tin}
+                onChange={(e) => updateField("tin", e.target.value.replace(/\D/g, ""))} className="font-mono" />
+              {info.tin && !/^\d{10}$/.test(info.tin) && <p className="text-xs text-destructive">ІПН має містити 10 цифр</p>}
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="modal-name" className="text-xs">ПІБ</Label>
+              <Input id="modal-name" placeholder="Іваненко Іван Іванович" value={info.fullName} onChange={(e) => updateField("fullName", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="modal-sti" className="text-xs">Код ДПІ</Label>
+              <Input id="modal-sti" placeholder="2655" maxLength={4} value={info.stiCode}
+                onChange={(e) => updateField("stiCode", e.target.value.replace(/\D/g, ""))} className="font-mono" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="modal-prevloss" className="text-xs">Збиток попередніх років, ₴</Label>
+              <Input id="modal-prevloss" type="number" min={0} step={0.01} value={info.prevLoss || ""}
+                onChange={(e) => updateField("prevLoss", parseFloat(e.target.value) || 0)} className="font-mono" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="modal-city" className="text-xs">Місто</Label>
+              <Input id="modal-city" placeholder="Київ" value={info.city} onChange={(e) => updateField("city", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="modal-street" className="text-xs">Вулиця</Label>
+              <Input id="modal-street" placeholder="вул. Хрещатик, 1" value={info.street} onChange={(e) => updateField("street", e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Preview table */}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader><TableRow>
@@ -816,8 +855,8 @@ function XmlPreviewModal({ open, onClose, result, info, hideAmounts, onDownload 
 
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>Закрити</Button>
-          <Button onClick={() => { onDownload(); onClose(); }}>
-            Завантажити XML{result.lots.length > 0 && " + Додаток Ф1"}
+          <Button onClick={() => { onDownload(); onClose(); }} disabled={!isFormValid}>
+            {!isFormValid ? "Заповніть всі поля" : `Завантажити XML${result.lots.length > 0 ? " + Додаток Ф1" : ""}`}
           </Button>
         </div>
       </DialogContent>
