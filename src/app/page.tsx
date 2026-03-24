@@ -873,10 +873,25 @@ function XmlPreviewModal({ open, onClose, result, info, hideAmounts, onDownload,
           </AlertDescription>
         </Alert>
 
+        {!isFormValid && (
+          <p className="text-xs text-destructive">
+            Не заповнено:{" "}
+            {[
+              !info.fullName.trim() && "ПІБ",
+              !info.tin && "ІПН",
+              (info.tin && !/^\d{10}$/.test(info.tin)) && "ІПН (10 цифр)",
+              !info.stiCode && "Код ДПІ",
+              (info.stiCode && !/^\d{4}$/.test(info.stiCode)) && "Код ДПІ (4 цифри)",
+              !info.city.trim() && "Місто",
+              !info.street.trim() && "Вулиця",
+            ].filter(Boolean).join(", ")}
+          </p>
+        )}
+
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>Закрити</Button>
           <Button onClick={() => { onDownload(); onClose(); }} disabled={!isFormValid}>
-            {!isFormValid ? "Заповніть всі поля" : `Завантажити XML${result.lots.length > 0 ? " + Додаток Ф1" : ""}`}
+            Завантажити XML{result.lots.length > 0 ? " + Додаток Ф1" : ""}
           </Button>
         </div>
       </DialogContent>
