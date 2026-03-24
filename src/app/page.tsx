@@ -53,6 +53,7 @@ import { generateMainXml, generateF1Xml, downloadFile } from "@/lib/xml-gen";
 import { loadInfo, saveInfo } from "@/lib/storage";
 import { type Theme, getStoredTheme, storeTheme, applyTheme } from "@/lib/theme";
 import { exportToExcel } from "@/lib/excel-export";
+import { exportToPdf } from "@/lib/pdf-export";
 
 function fmtUah(n: number, hide?: boolean): string {
   if (hide) return "••••••";
@@ -455,7 +456,8 @@ function ReportPhase({ info, result, dpsRows, ibkrData, hideAmounts, onReset, on
             {showUpload ? "Сховати" : "Додати файли"}
           </Button>
           <Button variant="outline" size="sm" onClick={onReset}>Скинути</Button>
-          <Button variant="outline" size="sm" onClick={() => exportToExcel(result, info.year)}>Завантажити Excel</Button>
+          <Button variant="outline" size="sm" onClick={() => exportToPdf(result, dpsRows, ibkrData, info.year)}>PDF</Button>
+          <Button variant="outline" size="sm" onClick={() => exportToExcel(result, info.year)}>Excel</Button>
           <Button size="sm" onClick={onDownload}>Згенерувати XML</Button>
         </div>
       </div>
