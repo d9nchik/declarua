@@ -39,7 +39,7 @@ const TAX_RATES: Record<string, TaxRateInfo> = {
 
 const NON_TAXABLE = new Set(["11.1", "11.2", "11.3"]);
 
-const CATEGORY_LABELS: Record<string, string> = {
+export const CATEGORY_LABELS: Record<string, string> = {
   "10.1": "Заробітна плата",
   "10.2": "Цивільно-правові договори",
   "10.3": "Роялті",
@@ -205,6 +205,21 @@ export async function calculateTax(
     Math.max(0, investmentPnl - info.prevLoss)
   );
 
+  // 7. Compute extra stats
+  const totalProceedsUah = round2(lots.reduce((s, l) => s + l.proceedsUah, 0));
+  const totalCostUah = round2(lots.reduce((s, l) => s + l.costUah, 0));
+  const totalCommissionUsd = ibkrData?.totalCommission ?? 0;
+
+  // Exchange rate difference
+  const totalProceedsUsd = round2(lots.reduce((s, l) => s + l.proceedsUsd, 0));
+  const totalPnlUsd = round2(lots.reduce((s, l) => s + l.pnlUsd, 0));
+  const avgRate = totalProceedsUsd > 0 ? totalProceedsUah / totalProceedsUsd : 0;
+  const expectedPnlUah = round2(totalPnlUsd * avgRate);
+  const exchangeRateDiff = lots.length > 0 ? round2(investmentPnl - expectedPnlUah) : 0;
+
+  const totalDividendsUah = round2(dividends.reduce((s, d) => s + d.amountUah, 0));
+  const totalWithholdingUah = round2(dividends.reduce((s, d) => s + d.withholdingTaxUah, 0));
+
   return {
     categories,
     lots,
@@ -220,5 +235,11 @@ export async function calculateTax(
     vzToPay,
     investmentPnl,
     investmentTaxableProfit,
+    totalProceedsUah,
+    totalCostUah,
+    totalCommissionUsd,
+    exchangeRateDiff,
+    totalDividendsUah,
+    totalWithholdingUah,
   };
 }

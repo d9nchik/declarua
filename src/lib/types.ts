@@ -93,4 +93,17 @@ export interface TaxResult {
   vzToPay: number;
   investmentPnl: number;
   investmentTaxableProfit: number;
+  totalProceedsUah: number;
+  totalCostUah: number;
+  totalCommissionUsd: number;
+  exchangeRateDiff: number;
+  totalDividendsUah: number;
+  totalWithholdingUah: number;
+}
+
+export type AppPhase = "upload" | "processing" | "report";
+
+export interface ProcessingStep {
+  label: string;
+  progress: number;
 }
