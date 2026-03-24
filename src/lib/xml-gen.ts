@@ -265,9 +265,10 @@ export function generateF1Xml(
     <R001G6>${fmt(totalPnl)}</R001G6>
     <R002G6>${fmt(info.prevLoss)}</R002G6>
     <R003G6>${fmt(financialResult)}</R003G6>
+    <R031G6>${fmt(Math.max(0, financialResult))}</R031G6>
+    <R032G6>${fmt(Math.abs(Math.min(0, financialResult)))}</R032G6>
     <R004G6>${fmt(pdfo)}</R004G6>
     <R005G6>${fmt(vz)}</R005G6>
-    <R031G6>${fmt(financialResult)}</R031G6>
     <R042G6>${fmt(pdfo)}</R042G6>
     <R052G6>${fmt(vz)}</R052G6>
 ${lotRows}  </DECLARBODY>
