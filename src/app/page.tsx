@@ -694,9 +694,9 @@ function CategoryAccordion({ category, lots, dividends, dpsRows, hide, exchangeR
               <Table>
                 <TableHeader><TableRow>
                   <TableHead>Тікер</TableHead><TableHead>Дата</TableHead>
-                  <TableHead className="text-right">Сума, $</TableHead><TableHead className="text-right">Податок, $</TableHead>
+                  <TableHead className="text-right">Сума, $</TableHead><TableHead className="text-right">Утримано, $</TableHead>
                   <TableHead className="text-right">Курс</TableHead><TableHead className="text-right">Сума, ₴</TableHead>
-                  <TableHead className="text-right">Податок, ₴</TableHead>
+                  <TableHead className="text-right">Утримано, ₴</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {filteredDivs.map((div, i) => (

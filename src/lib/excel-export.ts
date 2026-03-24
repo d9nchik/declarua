@@ -86,10 +86,10 @@ export function exportToExcel(result: TaxResult, year: number) {
       "Тікер": div.symbol,
       "Дата": fmtDate(div.date),
       "Сума дивідендів, $": round2(div.amount),
-      "Утриманий податок, $": round2(div.withholdingTax),
+      "Утримано за кордоном, $": round2(div.withholdingTax),
       "Курс НБУ": div.rate,
       "Сума дивідендів, ₴": round2(div.amountUah),
-      "Утриманий податок, ₴": round2(div.withholdingTaxUah),
+      "Утримано за кордоном, ₴": round2(div.withholdingTaxUah),
       "ПДФО (9%), ₴": round2(div.amountUah * 0.09),
       "Військовий збір (5%), ₴": round2(div.amountUah * 0.05),
       "Валюта": div.currency,
@@ -105,7 +105,7 @@ export function exportToExcel(result: TaxResult, year: number) {
     // Dividend summary
     const divSummary = [
       { "Показник": "Загальна сума дивідендів, ₴", "Значення": round2(result.totalDividendsUah) },
-      { "Показник": "Загальний утриманий податок, ₴", "Значення": round2(result.totalWithholdingUah) },
+      { "Показник": "Загальна сума утримана за кордоном, ₴", "Значення": round2(result.totalWithholdingUah) },
       { "Показник": "ПДФО з дивідендів (9%), ₴", "Значення": round2(result.totalDividendsUah * 0.09) },
       { "Показник": "ВЗ з дивідендів (5%), ₴", "Значення": round2(result.totalDividendsUah * 0.05) },
     ];
