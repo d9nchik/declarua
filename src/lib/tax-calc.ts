@@ -179,8 +179,10 @@ export async function calculateTax(
       agentPaidPdfo = round2(agentPaidPdfo + cat.pdfo);
       agentPaidVz = round2(agentPaidVz + cat.vz);
     } else {
-      selfPaidPdfo = round2(selfPaidPdfo + cat.pdfo);
-      selfPaidVz = round2(selfPaidVz + cat.vz);
+      // Each self-paid category's tax is capped at 0 independently —
+      // losses in 10.8 don't offset taxes from 10.10
+      selfPaidPdfo = round2(selfPaidPdfo + Math.max(0, cat.pdfo));
+      selfPaidVz = round2(selfPaidVz + Math.max(0, cat.vz));
     }
   }
 
