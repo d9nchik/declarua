@@ -15,7 +15,32 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DeclarUA — Податкова декларація з IBKR",
   description:
-    "Генератор декларації F0100215 для доходів з Interactive Brokers. Все працює у браузері — дані не передаються на сервер.",
+    "Безкоштовний генератор податкової декларації F0100215 для доходів з Interactive Brokers. Розрахунок ПДФО, військового збору, курсів НБУ. Все працює у браузері — дані не передаються на сервер.",
+  keywords: [
+    "податкова декларація",
+    "IBKR",
+    "Interactive Brokers",
+    "F0100215",
+    "ПДФО",
+    "військовий збір",
+    "інвестиційний прибуток",
+    "дивіденди",
+    "курс НБУ",
+    "декларація Україна",
+    "ДПС",
+    "DeclarUA",
+  ],
+  openGraph: {
+    title: "DeclarUA — Податкова декларація з IBKR",
+    description:
+      "Безкоштовний генератор декларації для доходів з Interactive Brokers. ПДФО, ВЗ, курси НБУ. Дані не покидають браузер.",
+    type: "website",
+    locale: "uk_UA",
+    url: "https://d9nchik.github.io/declarua",
+  },
+  alternates: {
+    canonical: "https://d9nchik.github.io/declarua",
+  },
 };
 
 export default function RootLayout({
