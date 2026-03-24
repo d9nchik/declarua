@@ -269,18 +269,30 @@ function UploadPhase({ info, updateField, ibkrData, dpsRows, ibkrFileName, dpsFi
         <DropZone label="Відомості з ДПС" subtitle="Форма F1419104 — XML з Державного реєстру" icon="🏛️"
           fileName={dpsFileName} fileInfo={dpsRows.length > 0 ? `${dpsRows.length} записів` : null} onFile={onDpsFile}
           helpTitle="Як отримати цей файл?" helpSteps={[
-            "Зайдіть у кабінет платника податків cabinet.tax.gov.ua",
-            "Оберіть «Відомості з ДПС» → «Запит на отримання»",
-            "Сформуйте запит F1419104 за потрібний рік",
-            "Завантажте XML файл",
+            { text: "Увійдіть до кабінету платника податків → cabinet.tax.gov.ua" },
+            { text: "Перейдіть у розділ «Запити» → «Запит на отримання відомостей з Державного реєстру»" },
+            { text: "Оберіть форму F1419104 «Відомості з Державного реєстру фізичних осіб — платників податків про суми виплачених доходів»" },
+            { text: "Вкажіть звітний період — потрібний рік (наприклад, 01.01.2025 — 31.12.2025)" },
+            { text: "Підпишіть запит КЕП та надішліть" },
+            { text: "Дочекайтесь відповіді (зазвичай кілька хвилин) → завантажте XML файл з відповіді" },
           ]} />
         <DropZone label="Flex-запит IBKR" subtitle="Завантаження Flex-запитів Interactive Brokers" icon="📈"
           fileName={ibkrFileName} fileInfo={ibkrData ? `${ibkrData.lots.length} угод, ${ibkrData.dividends.length} дивідендів` : null}
           onFile={onIbkrFile} helpTitle="Як сформувати Flex-запит?" helpSteps={[
-            "Зайдіть в IBKR → Performance & Reports → Flex Queries",
-            "Створіть Flex Query з розділами: Trades, Cash Transactions",
-            "Формат: XML, період: потрібний рік",
-            "Запустіть та завантажте файл",
+            { text: "Увійдіть до облікового запису Interactive Brokers → interactivebrokers.com" },
+            { text: "Перейдіть у вкладку Performance & Reports → Flex Queries" },
+            { text: "У таблиці Activity Flex Query натисніть + та вкажіть ім'я в полі Query Name" },
+            { text: "У Sections оберіть та налаштуйте:", sub: [
+              "Cash Transaction → Dividends, Payment in Lieu of Dividends, Withholding Tax, 871(m) Withholding, Other Income, Brokers interest received, Bond Interest Paid, Bond Interest Received, Detail → Select all → Save",
+              "Corporate Actions → Detail → Select all → Save",
+              "Grant Activity → Detail → Select all → Save",
+              "Trades → Closed Lots, Execution (якщо були операції з опціонами) → Select all → Save",
+            ]},
+            { text: "Display Account Alias in Place of Account ID? → Yes" },
+            { text: "Натисніть Continue → Create → Ok" },
+            { text: "У рядку з вашим запитом натисніть стрілку → Run" },
+            { text: "Оберіть Period → Custom Date Range та вкажіть рік (наприклад, 01.01.2025 — 31.12.2025)" },
+            { text: "Натисніть Run, дочекайтесь формування та завантажте XML-файл" },
           ]} />
       </div>
 
@@ -341,10 +353,15 @@ function UploadPhase({ info, updateField, ibkrData, dpsRows, ibkrFileName, dpsFi
 
 // ── Drop Zone ──
 
+interface HelpStep {
+  text: string;
+  sub?: string[];
+}
+
 function DropZone({ label, subtitle, icon, fileName, fileInfo, onFile, helpTitle, helpSteps }: {
   label: string; subtitle: string; icon: string;
   fileName: string | null; fileInfo: string | null;
-  onFile: (file: File) => void; helpTitle: string; helpSteps: string[];
+  onFile: (file: File) => void; helpTitle: string; helpSteps: HelpStep[];
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -383,8 +400,17 @@ function DropZone({ label, subtitle, icon, fileName, fileInfo, onFile, helpTitle
             {helpTitle}
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
-              {helpSteps.map((step, i) => <p key={i}>{i + 1}. {step}</p>)}
+            <div className="mt-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1.5">
+              {helpSteps.map((step, i) => (
+                <div key={i}>
+                  <p>{i + 1}. {step.text}</p>
+                  {step.sub && (
+                    <ul className="ml-4 mt-1 space-y-0.5 list-disc list-inside text-muted-foreground/80">
+                      {step.sub.map((s, j) => <li key={j}>{s}</li>)}
+                    </ul>
+                  )}
+                </div>
+              ))}
             </div>
           </CollapsibleContent>
         </Collapsible>
