@@ -51,6 +51,7 @@ import { parseDpsXml } from "@/lib/parse-dps";
 import { calculateTax, CATEGORY_LABELS } from "@/lib/tax-calc";
 import { generateMainXml, generateF1Xml, downloadFile } from "@/lib/xml-gen";
 import { loadInfo, saveInfo } from "@/lib/storage";
+import { type Theme, getStoredTheme, storeTheme, applyTheme } from "@/lib/theme";
 
 function fmtUah(n: number, hide?: boolean): string {
   if (hide) return "••••••";
@@ -98,6 +99,24 @@ export default function Home() {
   const [progressLabel, setProgressLabel] = useState("");
   const [progressValue, setProgressValue] = useState(0);
   const [xmlModalOpen, setXmlModalOpen] = useState(false);
+  const [theme, setThemeState] = useState<Theme>("system");
+
+  useEffect(() => {
+    setThemeState(getStoredTheme());
+  }, []);
+
+  useEffect(() => {
+    applyTheme(theme);
+    storeTheme(theme);
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => { if (theme === "system") applyTheme("system"); };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [theme]);
+
+  const cycleTheme = useCallback(() => {
+    setThemeState((t) => t === "system" ? "light" : t === "light" ? "dark" : "system");
+  }, []);
 
   useEffect(() => { saveInfo(info); }, [info]);
 
@@ -207,6 +226,9 @@ export default function Home() {
                 <Switch id="hide-amounts" checked={hideAmounts} onCheckedChange={setHideAmounts} />
               </div>
             )}
+            <button onClick={cycleTheme} className="text-sm hover:text-foreground text-muted-foreground transition-colors" title={`Тема: ${theme}`}>
+              {theme === "dark" ? "🌙" : theme === "light" ? "☀️" : "💻"}
+            </button>
             <span className="text-xs text-muted-foreground hidden md:inline">Дані не передаються на сервер</span>
           </div>
         </div>
