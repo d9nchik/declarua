@@ -814,7 +814,7 @@ function XmlPreviewModal({ open, onClose, result, info, hideAmounts, onDownload,
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="modal-prevloss" className="text-xs">Збиток попередніх років, ₴</Label>
-              <Input id="modal-prevloss" type="number" min={0} step={0.01} value={info.prevLoss || ""}
+              <Input id="modal-prevloss" type="number" min={0} step={0.01} value={info.prevLoss}
                 onChange={(e) => updateField("prevLoss", parseFloat(e.target.value) || 0)} className="font-mono" />
             </div>
             <div className="space-y-1.5">
