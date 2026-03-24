@@ -132,13 +132,14 @@ export async function calculateTax(
   }
 
   // Add IBKR investment profit (10.8)
+  // Show actual P&L (can be negative) — capping at 0 only happens in F1 XML generation
   if (lots.length > 0) {
     const totalPnlUah = round2(lots.reduce((s, l) => s + l.pnlUah, 0));
-    const taxableProfit = round2(Math.max(0, totalPnlUah - info.prevLoss));
+    const pnlAfterLoss = round2(totalPnlUah - info.prevLoss);
     const cat = getOrCreate("10.8");
-    cat.amount = round2(cat.amount + taxableProfit);
-    cat.pdfo = round2(taxableProfit * cat.pdfoRate);
-    cat.vz = round2(taxableProfit * cat.vzRate);
+    cat.amount = round2(cat.amount + pnlAfterLoss);
+    cat.pdfo = round2(pnlAfterLoss * cat.pdfoRate);
+    cat.vz = round2(pnlAfterLoss * cat.vzRate);
   }
 
   // Add IBKR dividends (10.10)
